@@ -1,0 +1,21 @@
+{
+  "name": "dailybite-root",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces && npm install",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "seed": "npm run seed --workspace=server",
+    "start": "npm run start --workspace=server",
+    "start:single-port": "concurrently \"node server/scripts/mongodb.js\" \"npm run dev:server\""
+  },
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

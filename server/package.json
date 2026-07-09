@@ -1,0 +1,37 @@
+{
+  "name": "dailybite-server",
+  "version": "1.0.0",
+  "description": "DailyBite meal delivery subscription platform - backend server",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "seed": "node scripts/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "razorpay": "^2.9.6",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.1.0",
+    "nodemon": "^3.1.9"
+  },
+  "keywords": [
+    "meal-delivery",
+    "subscription",
+    "express",
+    "mongodb"
+  ],
+  "license": "ISC"
+}
