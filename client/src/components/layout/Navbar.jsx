@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useUiStore } from '../../store/uiStore.js';
 import { Avatar } from '../ui/Avatar.jsx';
-import { Bell, LogOut, User as UserIcon, Wallet, Settings } from 'lucide-react';
+import { Bell, LogOut, User as UserIcon, Wallet, Settings, Sun, Moon, ShoppingCart, Trash2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export const Navbar = () => {
   const { user, logout } = useAuthStore();
-  const { toggleSidebar } = useUiStore();
+  const { toggleSidebar, theme, toggleTheme, cart, removeFromCart, clearCart } = useUiStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, title: 'Order Delivered', message: 'Tiffin delivered successfully at home address.', time: '10 mins ago', read: false },
     { id: 2, title: 'Kitchen Dispatch', message: 'Raju Rider is on the way with your lunch box.', time: '1 hour ago', read: false },
@@ -79,26 +80,190 @@ export const Navbar = () => {
         style={{ display: 'flex', alignItems: 'center', gap: '16px' }}
       >
         {user && user.role !== 'admin' && (
-          <Link
-            to="/wallet"
-            className="navbar__wallet-shortcut"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-full)',
-              backgroundColor: 'var(--bg-glass)',
-              color: 'var(--accent-primary)',
-              textDecoration: 'none',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-            }}
-          >
-            <Wallet size={16} />
-            <span>Wallet</span>
-          </Link>
+          <>
+            <Link
+              to="/wallet"
+              className="navbar__wallet-shortcut"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'var(--bg-glass)',
+                color: 'var(--accent-primary)',
+                textDecoration: 'none',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+              }}
+            >
+              <Wallet size={16} />
+              <span>Wallet</span>
+            </Link>
+
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => {
+                  setCartOpen(!cartOpen);
+                  setDropdownOpen(false);
+                  setNotificationsOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: 'var(--bg-glass)',
+                  color: 'var(--accent-primary)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  transition: 'all var(--transition-fast) ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-glass-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-glass)';
+                }}
+              >
+                <ShoppingCart size={16} />
+                <span>Cart ({cart.length})</span>
+              </button>
+
+              {cartOpen && (
+                <>
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 99,
+                    }}
+                    onClick={() => setCartOpen(false)}
+                  />
+                  <div
+                    className="dropdown-menu glass--solid"
+                    style={{
+                      position: 'absolute',
+                      top: '48px',
+                      right: 0,
+                      width: '300px',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-glass)',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      zIndex: 100,
+                      animation: 'fadeIn 0.2s ease-out',
+                      boxShadow: 'var(--shadow-lg)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)', paddingBottom: '8px' }}>
+                      <span style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Selected Meals ({cart.length})</span>
+                      {cart.length > 0 && (
+                        <button 
+                          onClick={clearCart}
+                          style={{ background: 'none', border: 'none', color: 'var(--error)', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          Clear All
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto', scrollbarWidth: 'none' }}>
+                      {cart.length > 0 ? (
+                        cart.map((cartItem) => (
+                          <div 
+                            key={cartItem._id} 
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '6px 0',
+                              justifyContent: 'space-between'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                              {cartItem.image && (
+                                <img 
+                                  src={cartItem.image} 
+                                  alt={cartItem.name} 
+                                  style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} 
+                                />
+                              )}
+                              <div style={{ minWidth: 0, textAlign: 'left' }}>
+                                <div style={{ fontWeight: 600, fontSize: '11px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {cartItem.name}
+                                </div>
+                                <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                                  {cartItem.calories} kcal | {cartItem.category}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => removeFromCart(cartItem._id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
+                          No meals added to cart yet. Explore the menu to add some!
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
         )}
+
+        <button
+          onClick={toggleTheme}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            padding: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--radius-md)',
+            transition: 'color var(--transition-fast) ease, background-color var(--transition-fast) ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--bg-glass)';
+            e.currentTarget.style.color = 'var(--accent-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
 
         <div style={{ position: 'relative' }}>
           <button
@@ -148,7 +313,7 @@ export const Navbar = () => {
                 onClick={() => setNotificationsOpen(false)}
               />
               <div
-                className="dropdown-menu glass"
+                className="dropdown-menu glass--solid"
                 style={{
                   position: 'absolute',
                   top: '48px',
@@ -162,6 +327,7 @@ export const Navbar = () => {
                   gap: '8px',
                   zIndex: 100,
                   animation: 'fadeIn 0.2s ease-out',
+                  boxShadow: 'var(--shadow-lg)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)', paddingBottom: '8px', marginBottom: '4px' }}>
@@ -244,7 +410,7 @@ export const Navbar = () => {
                   onClick={() => setDropdownOpen(false)}
                 />
                 <div
-                  className="dropdown-menu glass"
+                  className="dropdown-menu glass--solid"
                   style={{
                     position: 'absolute',
                     top: '48px',
@@ -258,6 +424,7 @@ export const Navbar = () => {
                     gap: '4px',
                     zIndex: 100,
                     animation: 'fadeIn 0.2s ease-out',
+                    boxShadow: 'var(--shadow-lg)',
                   }}
                 >
                   <div

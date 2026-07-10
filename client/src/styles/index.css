@@ -180,6 +180,36 @@ p {
   --sidebar-width: 260px;
   --sidebar-collapsed: 72px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Scrollbar Theme Variables */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Dark Theme Custom Properties ---------- */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #121218;
+  --bg-tertiary: #1a1a24;
+  --bg-glass: rgba(255, 255, 255, 0.04);
+  --bg-glass-hover: rgba(255, 255, 255, 0.08);
+  --bg-glass-active: rgba(255, 255, 255, 0.12);
+
+  /* Borders */
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --border-glass-hover: rgba(255, 255, 255, 0.15);
+  --border-glass-active: rgba(255, 255, 255, 0.22);
+
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaab;
+  --text-muted: #777778;
+  --text-inverse: #0a0a0f;
+
+  /* Scrollbar Theme Variables */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
 }
 
 /* ---------- Base Styles ---------- */
@@ -231,17 +261,17 @@ a:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--scrollbar-thumb-hover);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 /* ---------- Utility Classes ---------- */
@@ -369,6 +399,20 @@ a:hover {
 }
 
 /* ---------- Keyframe Animations ---------- */
+@keyframes float-slow-1 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+}
+
+@keyframes float-slow-2 {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(15px) rotate(-8deg); }
+}
+
+@keyframes float-slow-3 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-10px, -10px) rotate(12deg); }
+}
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

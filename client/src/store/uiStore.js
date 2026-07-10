@@ -4,7 +4,8 @@ export const useUiStore = create((set) => ({
   sidebarOpen: false,
   toasts: [],
   activeModal: null,
-  theme: localStorage.getItem('dailybite_theme') || 'dark',
+  theme: localStorage.getItem('dailybite_theme') || 'light',
+  cart: JSON.parse(localStorage.getItem('dailybite_cart')) || [],
 
   toggleSidebar: (isOpen) => {
     set((state) => ({ sidebarOpen: isOpen !== undefined ? isOpen : !state.sidebarOpen }));
@@ -46,5 +47,30 @@ export const useUiStore = create((set) => ({
       document.documentElement.setAttribute('data-theme', nextTheme);
       return { theme: nextTheme };
     });
+  },
+
+  addToCart: (item) => {
+    set((state) => {
+      const exists = state.cart.some((cartItem) => cartItem._id === item._id);
+      if (exists) {
+        return { cart: state.cart };
+      }
+      const updatedCart = [...state.cart, { ...item, quantity: 1 }];
+      localStorage.setItem('dailybite_cart', JSON.stringify(updatedCart));
+      return { cart: updatedCart };
+    });
+  },
+
+  removeFromCart: (itemId) => {
+    set((state) => {
+      const updatedCart = state.cart.filter((cartItem) => cartItem._id !== itemId);
+      localStorage.setItem('dailybite_cart', JSON.stringify(updatedCart));
+      return { cart: updatedCart };
+    });
+  },
+
+  clearCart: () => {
+    localStorage.removeItem('dailybite_cart');
+    set({ cart: [] });
   },
 }));

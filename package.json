@@ -15,7 +15,7 @@
     "start": "npm run start --workspace=server",
     "start:single-port": "concurrently \"node server/scripts/mongodb.js\" \"npm run dev:server\""
   },
-  "dependencies": {
-    "concurrently": "^9.1.2"
+  "devDependencies": {
+    "concurrently": "^10.0.3"
   }
 }

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore.js';
+import { useUiStore } from '../../store/uiStore.js';
 import Navbar from './Navbar.jsx';
 import BottomNav from './BottomNav.jsx';
 import Sidebar from './Sidebar.jsx';
@@ -9,7 +10,13 @@ import LoadingSkeleton from '../ui/LoadingSkeleton.jsx';
 
 export const AppLayout = () => {
   const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { theme } = useUiStore();
   const location = useLocation();
+
+  // Sync theme to root HTML element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Run auth check on initial load
   useEffect(() => {

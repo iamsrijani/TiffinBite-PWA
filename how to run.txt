@@ -1,0 +1,30 @@
+Step-1: sudo apt update
+node -v   # check if already installed
+
+--If Node isn't installed (or is too old), install via NodeSource (gives you a recent LTS):
+	curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+	sudo apt install -y nodejs
+	node -v
+	npm -v
+
+--Git (usually preinstalled on Ubuntu, but just in case):
+	sudo apt install -y git 
+
+Step-2: git clone <your-repo-url>
+cd TiffinBite-PWA
+
+Step-3: npm install
+npm install --workspace=server
+npm install --workspace=client
+
+Step-4: cp .env.example .env
+cp .env.example server/.env
+
+nano .env
+nano server/.env
+
+Step-5: cd client
+npm run build
+cd ..
+
+Step-6: npm run start:single-port

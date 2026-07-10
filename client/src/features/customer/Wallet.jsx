@@ -94,7 +94,7 @@ export const Wallet = () => {
     try {
       // Amount in paise (multiply by 100)
       const amountInPaise = value * 100;
-      await handleRazorpayPayment(value); return;
+      const response = await walletService.addFunds(amountInPaise);
       
       if (response.success) {
         addToast(`Recharged ₹${value.toFixed(2)} successfully!`, 'success');

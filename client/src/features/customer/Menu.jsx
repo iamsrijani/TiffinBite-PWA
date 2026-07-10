@@ -22,7 +22,7 @@ export const Menu = () => {
     }
   };
 
-  const { addToast } = useUiStore();
+  const { addToast, addToCart, cart } = useUiStore();
   const [loading, setLoading] = useState(true);
   const [weeklyMenus, setWeeklyMenus] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -157,8 +157,8 @@ export const Menu = () => {
               <Card key={item._id} className="glass" style={{ padding: '0', overflow: 'hidden' }}>
                 {item.image && <img src={item.image} alt={item.name} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />}
                 <div style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                  <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
+                  <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <Badge variant={item.category}>{item.category.toUpperCase()}</Badge>
                       {item.tags?.map((t) => (
@@ -171,6 +171,57 @@ export const Menu = () => {
                     <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       {item.description}
                     </p>
+                  </div>
+                  
+                  <div style={{ flexShrink: 0 }}>
+                    {cart.some((cartItem) => cartItem._id === item._id) ? (
+                      <button
+                        disabled
+                        style={{
+                          backgroundColor: 'var(--success-bg)',
+                          color: 'var(--success)',
+                          border: '1px solid var(--success-border)',
+                          padding: '8px 16px',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 600,
+                          cursor: 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        ✓ Added
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          addToCart(item);
+                          addToast('Meal added to cart!', 'success');
+                        }}
+                        style={{
+                          backgroundColor: 'var(--accent-primary)',
+                          color: '#ffffff',
+                          padding: '8px 16px',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all var(--transition-fast) ease',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--accent-secondary)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--accent-primary)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        Add to Cart
+                      </button>
+                    )}
                   </div>
                 </div>
 
