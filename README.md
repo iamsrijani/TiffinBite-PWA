@@ -251,106 +251,62 @@ const handleTouchEnd = async (e) => {
 
 ---
 
-## 🗄️ Database Models
 
-| Model | Description |
-|---|---|
-| User | Phone, name, role, addresses, dietary preferences |
-| Menu | Daily menu items with nutritional data, pricing |
-| Order | Links user to menu, delivery status, proof photo |
-| Subscription | Plan, meal type, paused dates, meals remaining |
-| Wallet | Balance in paise, full transaction history |
+## 🗃️ Caching Strategies (Workbox)
+**File:** `client/vite.config.js` → `workbox.runtimeCaching`
 
----
+| Strategy | Used For | How it works |
+|---|---|---|
+| NetworkFirst | API calls (/api/*) | Tries network first, uses cache if offline |
+| CacheFirst | Images (.png, .jpg, .svg) | Serves from cache instantly, reduces network usage |
+| StaleWhileRevalidate | JS/CSS static files | Shows cached version immediately, updates cache in background |
+| NetworkOnly | Socket.io real-time | Never caches — always fetches live data |
+| CacheOnly | Offline page | Only serves from cache, no network request needed |
 
-## ⚡ Key Backend Features
+### On Windows
 
-### Automated Order Generation (node-cron)
-Every night at 12 AM IST, a cron job automatically creates the next day's orders for all active subscribers — no manual work needed.
-
-```javascript
-cron.schedule('0 0 * * *', async () => {
-  // Find all active subscriptions
-  // Skip paused dates
-  // Check for duplicates
-  // Create orders automatically
-}, { timezone: 'Asia/Kolkata' });
-```
-
-### Real-time Updates (Socket.io)
-When a delivery partner marks an order as delivered, the customer's screen updates instantly without page refresh.
-
-```javascript
-// Customer joins personal room on login
-socket.join(`user_${userId}`);
-
-// Server emits to specific customer when order status changes
-io.to(`user_${userId}`).emit('orderStatusUpdate', { orderId, status });
-```
-
-### JWT Authentication
-Phone-based OTP login with JWT tokens and role-based access control.
-
----
-
-## 💳 Payment Integration (Razorpay)
-
-Real payment gateway integration for wallet top-up.
-
-```javascript
-// Backend creates order
-const order = await razorpay.orders.create({
-  amount: amount * 100, // in paise
-  currency: 'INR',
-});
-
-// Frontend opens Razorpay checkout
-const rzp = new window.Razorpay({ key, amount, order_id });
-rzp.open();
-
-// Backend verifies payment signature
-const isValid = verifyPayment(orderId, paymentId, signature);
-```
-
----
-
-## 🏃 How to Run
-
-### Prerequisites
-- Node.js (v18+)
-- MongoDB
-
-### Steps
+MongoDB installs as a Windows Service and starts automatically.
+Open Command Prompt in project folder and run:
 
 ```bash
-# 1. Start MongoDB
-mongod --dbpath ~/data/db
+# 1. Copy server/.env.example to server/.env and fill in values
 
 # 2. Install dependencies
 npm install
 
-# 3. Create server/.env file
-# (see .env.example for required variables)
-
-# 4. Seed the database
+# 3. Seed the database
 npm run seed
 
-# 5. Run the app
+# 4. Run the app
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Open http://localhost:5173 in your browser.
+
+### Environment Variables
+Copy `server/.env.example` to `server/.env`:
+
+```
+PORT=3001
+NODE_ENV=development
+MONGODB_URI=mongodb://localhost:27017/dailybite
+JWT_SECRET=your_secret_key_here
+JWT_EXPIRE=7d
+OTP_EXPIRY=5
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+RAZORPAY_KEY_ID=your_razorpay_test_key
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+```
 
 ### Test Accounts
-| Role | Phone | 
+| Role | Phone |
 |---|---|
 | Admin | 9999999999 |
 | Delivery Partner | 8888888888 |
 | Customer | 7777777777 |
 
 *OTP appears in the terminal during development*
-
----
 
 ## 📁 Project Structure
 
