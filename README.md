@@ -251,6 +251,33 @@ const handleTouchEnd = async (e) => {
 
 ---
 
+
+## 🗃️ Caching Strategies (Workbox)
+**File:** `client/vite.config.js` → `workbox.runtimeCaching`
+
+| Strategy | Used For | How it works |
+|---|---|---|
+| NetworkFirst | API calls (/api/*) | Tries network first, uses cache if offline |
+| CacheFirst | Images (.png, .jpg, .svg) | Serves from cache instantly, reduces network usage |
+| StaleWhileRevalidate | JS/CSS static files | Shows cached version immediately, updates cache in background |
+| NetworkOnly | Socket.io real-time | Never caches — always fetches live data |
+| CacheOnly | Offline page | Only serves from cache, no network request needed |
+
+### On Windows
+
+MongoDB installs as a Windows Service and starts automatically.
+Open Command Prompt in project folder and run:
+
+```bash
+# 1. Copy server/.env.example and rename to server/.env
+# 2. Fill in the values
+
+npm install
+npm run seed
+npm run dev
+```
+
+
 ## 🗄️ Database Models
 
 | Model | Description |
