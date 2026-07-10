@@ -4,7 +4,7 @@ export const useUiStore = create((set) => ({
   sidebarOpen: false,
   toasts: [],
   activeModal: null,
-  theme: localStorage.getItem('dailybite_theme') || 'light',
+  theme: localStorage.getItem('dailybite_theme') || 'dark',
   cart: JSON.parse(localStorage.getItem('dailybite_cart')) || [],
 
   toggleSidebar: (isOpen) => {

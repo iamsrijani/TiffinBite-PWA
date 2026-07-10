@@ -25,7 +25,7 @@ export const requestNotificationPermission = async () => {
       return token;
     }
   } catch (error) {
-    console.error('Notification permission error:', error);
+    console.warn('Notification subscription skipped (FCM push notification setup incomplete):', error.message || error);
   }
 };
 

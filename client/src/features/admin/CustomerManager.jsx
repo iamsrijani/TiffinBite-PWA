@@ -22,6 +22,8 @@ export const CustomerManager = () => {
   // Detail modal
   const [showDetail, setShowDetail] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerDetails, setCustomerDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   
   // Refund states
   const [showRefundForm, setShowRefundForm] = useState(false);
@@ -58,6 +60,18 @@ export const CustomerManager = () => {
     setSelectedCustomer(customer);
     setShowDetail(true);
     setShowRefundForm(false);
+    setCustomerDetails(null);
+    setLoadingDetails(true);
+    try {
+      const response = await adminService.getCustomerById(customer._id);
+      if (response.success) {
+        setCustomerDetails(response.data);
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to fetch customer profile details.', 'error');
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleIssueRefund = async (e) => {
@@ -211,72 +225,157 @@ export const CustomerManager = () => {
 
             <hr style={{ border: 'none', borderBottom: '1px solid var(--border-glass)', margin: 0 }} />
 
-            {/* Diet settings */}
-            <div>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>DIETARY CONFIGURATION</span>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <Badge variant="glass">Diet: {selectedCustomer.dietaryPreferences?.type || 'veg'}</Badge>
-                <Badge variant="glass">Spice: {selectedCustomer.dietaryPreferences?.spiceLevel || 'medium'}</Badge>
-                {selectedCustomer.dietaryPreferences?.allergies?.length > 0 && (
-                  <Badge variant="glass">Allergies: {selectedCustomer.dietaryPreferences.allergies.join(', ')}</Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Addresses */}
-            <div>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>DELIVERY LOCATIONS ({selectedCustomer.addresses?.length || 0})</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {selectedCustomer.addresses?.map((addr) => (
-                  <div key={addr._id} className="glass" style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)', fontSize: 'var(--text-xs)' }}>
-                    <strong>{addr.label}</strong>: {addr.line1}, {addr.city} ({addr.pincode})
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Refund form toggle */}
-            {!showRefundForm ? (
-              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                <Button
-                  variant="outline"
-                  icon={DollarSign}
-                  onClick={() => setShowRefundForm(true)}
-                >
-                  Issue Balance Refund
-                </Button>
-              </div>
+            {loadingDetails ? (
+              <LoadingSkeleton type="card" count={2} />
             ) : (
-              <form onSubmit={handleIssueRefund} style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: '1px dashed var(--border-glass)', padding: '16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-glass)' }}>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-secondary)' }}>REFUND ADJUSTMENT FORM</span>
-                
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <Input
-                    id="ref-amount"
-                    label="Amount (₹)"
-                    placeholder="200"
-                    type="number"
-                    value={refundAmount}
-                    onChange={(e) => setRefundAmount(e.target.value)}
-                    style={{ flex: 1 }}
-                    required
-                  />
-                  <Input
-                    id="ref-desc"
-                    label="Description"
-                    placeholder="Dispute credit"
-                    value={refundDesc}
-                    onChange={(e) => setRefundDesc(e.target.value)}
-                    style={{ flex: 2 }}
-                    required
-                  />
-                </div>
+              customerDetails && (
+                <>
+                  {/* Wallet Balance */}
+                  <div className="glass" style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Wallet size={16} color="var(--accent-primary)" />
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Wallet Balance:</span>
+                    </div>
+                    <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--accent-primary)' }}>
+                      ₹{customerDetails.wallet?.balanceInRupees || '0.00'}
+                    </strong>
+                  </div>
 
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <Button variant="ghost" size="sm" onClick={() => setShowRefundForm(false)}>Cancel</Button>
-                  <Button type="submit" variant="primary" size="sm" loading={submittingRefund}>Issue Credit</Button>
-                </div>
-              </form>
+                  {/* Diet settings */}
+                  <div>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>DIETARY CONFIGURATION</span>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <Badge variant="glass">Diet: {selectedCustomer.dietaryPreferences?.type || 'veg'}</Badge>
+                      <Badge variant="glass">Spice: {selectedCustomer.dietaryPreferences?.spiceLevel || 'medium'}</Badge>
+                      {selectedCustomer.dietaryPreferences?.allergies?.length > 0 && (
+                        <Badge variant="glass">Allergies: {selectedCustomer.dietaryPreferences.allergies.join(', ')}</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Addresses */}
+                  <div>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>DELIVERY LOCATIONS ({selectedCustomer.addresses?.length || 0})</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {selectedCustomer.addresses?.map((addr) => (
+                        <div key={addr._id} className="glass" style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)', fontSize: 'var(--text-xs)' }}>
+                          <strong>{addr.label}</strong>: {addr.line1}, {addr.city} ({addr.pincode})
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Subscriptions */}
+                  <div>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                      MEAL SUBSCRIPTIONS ({customerDetails.subscriptions?.length || 0})
+                    </span>
+                    {customerDetails.subscriptions && customerDetails.subscriptions.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {customerDetails.subscriptions.map((sub) => {
+                          const statusColors = {
+                            active: 'var(--success)',
+                            paused: 'var(--warning)',
+                            cancelled: 'var(--error)',
+                            expired: 'var(--text-muted)',
+                          };
+                          return (
+                            <div 
+                              key={sub._id} 
+                              className="glass" 
+                              style={{ 
+                                padding: '12px', 
+                                borderRadius: 'var(--radius-md)', 
+                                border: '1px solid var(--border-glass)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <strong style={{ fontSize: 'var(--text-sm)', textTransform: 'capitalize' }}>
+                                  {sub.plan} Plan ({sub.mealType})
+                                </strong>
+                                <span style={{ 
+                                  fontSize: '10px', 
+                                  fontWeight: 700, 
+                                  color: statusColors[sub.status] || 'var(--text-primary)',
+                                  textTransform: 'uppercase',
+                                  backgroundColor: 'rgba(255,255,255,0.02)',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  border: `1px solid ${statusColors[sub.status] || 'var(--border-glass)'}`
+                                }}>
+                                  {sub.status}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                                Meals: {sub.mealsRemaining} / {sub.totalMeals} remaining
+                              </div>
+                              <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                Dates: {format(new Date(sub.startDate), 'MMM dd, yyyy')} - {format(new Date(sub.endDate), 'MMM dd, yyyy')}
+                              </div>
+                              {sub.pausedDates?.length > 0 && (
+                                <div style={{ fontSize: '10px', color: 'var(--warning)', marginTop: '4px', borderTop: '1px dashed var(--border-glass)', paddingTop: '4px' }}>
+                                  <strong>Paused Dates:</strong> {sub.pausedDates.map(d => format(new Date(d), 'MMM dd, yyyy')).join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        No subscriptions found.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Refund form toggle */}
+                  {!showRefundForm ? (
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                      <Button
+                        variant="outline"
+                        icon={DollarSign}
+                        onClick={() => setShowRefundForm(true)}
+                      >
+                        Issue Balance Refund
+                      </Button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleIssueRefund} style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: '1px dashed var(--border-glass)', padding: '16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-glass)' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-secondary)' }}>REFUND ADJUSTMENT FORM</span>
+                      
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <Input
+                          id="ref-amount"
+                          label="Amount (₹)"
+                          placeholder="200"
+                          type="number"
+                          value={refundAmount}
+                          onChange={(e) => setRefundAmount(e.target.value)}
+                          style={{ flex: 1 }}
+                          required
+                        />
+                        <Input
+                          id="ref-desc"
+                          label="Description"
+                          placeholder="Dispute credit"
+                          value={refundDesc}
+                          onChange={(e) => setRefundDesc(e.target.value)}
+                          style={{ flex: 2 }}
+                          required
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <Button variant="ghost" size="sm" onClick={() => setShowRefundForm(false)}>Cancel</Button>
+                        <Button type="submit" variant="primary" size="sm" loading={submittingRefund}>Issue Credit</Button>
+                      </div>
+                    </form>
+                  )}
+                </>
+              )
             )}
 
           </div>

@@ -1,9 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useUiStore } from '../../store/uiStore.js';
 import { Avatar } from '../ui/Avatar.jsx';
 import { Bell, LogOut, User as UserIcon, Wallet, Settings, Sun, Moon, ShoppingCart, Trash2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { notificationService } from '../../services/api.js';
+
+const formatTimeAgo = (dateStr) => {
+  try {
+    const date = new Date(dateStr);
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    let interval = Math.floor(seconds / 31536000);
+    if (interval >= 1) return interval + "y ago";
+    interval = Math.floor(seconds / 2592000);
+    if (interval >= 1) return interval + "mo";
+    interval = Math.floor(seconds / 86400);
+    if (interval >= 1) return interval + "d ago";
+    interval = Math.floor(seconds / 3600);
+    if (interval >= 1) return interval + "h ago";
+    interval = Math.floor(seconds / 60);
+    if (interval >= 1) return interval + "m ago";
+    return "just now";
+  } catch (e) {
+    return "";
+  }
+};
 
 export const Navbar = () => {
   const { user, logout } = useAuthStore();
@@ -11,13 +33,44 @@ export const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Order Delivered', message: 'Tiffin delivered successfully at home address.', time: '10 mins ago', read: false },
-    { id: 2, title: 'Kitchen Dispatch', message: 'Raju Rider is on the way with your lunch box.', time: '1 hour ago', read: false },
-    { id: 3, title: 'Wallet Refunded', message: '₹120.00 refund credited for paused delivery.', time: 'Yesterday', read: true },
-    { id: 4, title: 'Welcome to DailyBite', message: 'Set up your dietary preferences to personalize your tiffins.', time: '2 days ago', read: true },
-  ]);
+  const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+    try {
+      const response = await notificationService.get();
+      if (response.success) {
+        setNotifications(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleMarkAsRead = async (notifId) => {
+    try {
+      setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
+      await notificationService.markRead(notifId);
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      await notificationService.markAllRead();
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -334,7 +387,7 @@ export const Navbar = () => {
                   <span style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Notifications</span>
                   {notifications.some(n => !n.read) && (
                     <button 
-                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                      onClick={handleMarkAllRead}
                       style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: '10px', cursor: 'pointer', fontWeight: 600 }}
                     >
                       Mark all read
@@ -346,10 +399,8 @@ export const Navbar = () => {
                   {notifications.length > 0 ? (
                     notifications.map((notif) => (
                       <div 
-                        key={notif.id} 
-                        onClick={() => {
-                          setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-                        }}
+                        key={notif._id} 
+                        onClick={() => handleMarkAsRead(notif._id)}
                         style={{
                           padding: '8px',
                           borderRadius: 'var(--radius-sm)',
@@ -362,7 +413,7 @@ export const Navbar = () => {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2px' }}>
                           <span style={{ fontWeight: 600, fontSize: '11px', color: 'var(--text-primary)' }}>{notif.title}</span>
-                          <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{notif.time}</span>
+                          <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{formatTimeAgo(notif.createdAt)}</span>
                         </div>
                         <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.3 }}>
                           {notif.message}

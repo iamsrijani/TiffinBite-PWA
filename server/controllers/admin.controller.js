@@ -3,6 +3,7 @@ import Order from '../models/Order.js';
 import Subscription from '../models/Subscription.js';
 import Wallet from '../models/Wallet.js';
 import Menu from '../models/Menu.js';
+import Notification from '../models/Notification.js';
 
 /**
  * @desc    Get dashboard stats
@@ -266,6 +267,17 @@ export const issueRefund = async (req, res, next) => {
       `Admin refund: ${reason || 'No reason specified'}`,
       `admin_refund_${Date.now()}`
     );
+
+    // Save notification for customer
+    try {
+      await Notification.create({
+        user: userId,
+        title: 'Wallet Refunded',
+        message: `₹${(amount / 100).toFixed(2)} refund credited to your wallet for: ${reason || 'Service refund'}.`,
+      });
+    } catch (notifErr) {
+      console.error('Failed to create refund notification:', notifErr);
+    }
 
     res.status(200).json({
       success: true,

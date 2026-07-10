@@ -19,6 +19,7 @@ import orderRoutes from './routes/order.routes.js';
 import walletRoutes from './routes/wallet.routes.js';
 import deliveryRoutes from './routes/delivery.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,6 +60,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Resolve static build path
 const __filename = fileURLToPath(import.meta.url);

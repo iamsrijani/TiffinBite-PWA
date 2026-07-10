@@ -5,6 +5,15 @@ import './styles/index.css';
 import './styles/components.css';
 import './styles/pages.css';
 
+// Force unregister active service workers to clear PWA cache and apply local changes instantly
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (let registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />

@@ -49,17 +49,24 @@ export const Wallet = () => {
 
   
   const handleRazorpayPayment = async (amount) => {
-    try {
-      const orderRes = await walletService.createOrder(amount * 100);
-      if (!orderRes.success) return;
-      const options = {
-        key: orderRes.key,
-        amount: orderRes.order.amount,
-        currency: 'INR',
-        name: 'DailyBite',
-        description: 'Wallet Recharge',
-        order_id: orderRes.order.id,
-        handler: async (response) => {
+    const orderRes = await walletService.createOrder(amount * 100);
+    if (!orderRes || !orderRes.success) {
+      throw new Error(orderRes?.message || 'Razorpay order creation failed.');
+    }
+    
+    if (!window.Razorpay) {
+      throw new Error('Razorpay SDK not loaded in browser.');
+    }
+
+    const options = {
+      key: orderRes.key,
+      amount: orderRes.order.amount,
+      currency: 'INR',
+      name: 'DailyBite',
+      description: 'Wallet Recharge',
+      order_id: orderRes.order.id,
+      handler: async (response) => {
+        try {
           const verifyRes = await walletService.verifyPayment({
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
@@ -69,16 +76,18 @@ export const Wallet = () => {
           if (verifyRes.success) {
             addToast('Payment successful!', 'success');
             fetchWallet(1);
+          } else {
+            addToast('Payment verification failed.', 'error');
           }
-        },
-        prefill: { name: 'DailyBite User' },
-        theme: { color: '#ff6b35' },
-      };
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err) {
-      addToast('Payment failed', 'error');
-    }
+        } catch (verifyErr) {
+          addToast(verifyErr.message || 'Payment verification failed.', 'error');
+        }
+      },
+      prefill: { name: 'DailyBite User' },
+      theme: { color: '#ff6b35' },
+    };
+    const rzp = new window.Razorpay(options);
+    rzp.open();
   };
 
   const handleAddFunds = async (e) => {
@@ -91,18 +100,27 @@ export const Wallet = () => {
     }
 
     setAddingFunds(true);
+    const amountInPaise = value * 100;
     try {
-      // Amount in paise (multiply by 100)
-      const amountInPaise = value * 100;
-      const response = await walletService.addFunds(amountInPaise);
-      
-      if (response.success) {
-        addToast(`Recharged ₹${value.toFixed(2)} successfully!`, 'success');
-        setAmount('');
-        fetchWallet(1); // reload wallet balance and transaction lists
-      }
+      // Try Razorpay simulation first
+      await handleRazorpayPayment(value);
+      setAmount('');
     } catch (err) {
-      addToast(err.message || 'Payment recharge failed.', 'error');
+      console.warn('Razorpay payment failed, falling back to mock payment:', err);
+      addToast('Razorpay simulation unavailable. Using simulated mock payment instead.', 'info');
+      
+      try {
+        const response = await walletService.addFunds(amountInPaise);
+        if (response.success) {
+          addToast(`Recharged ₹${value.toFixed(2)} successfully (Mock Payment)!`, 'success');
+          setAmount('');
+          fetchWallet(1); // reload wallet balance and transaction lists
+        } else {
+          addToast(response.message || 'Mock payment failed.', 'error');
+        }
+      } catch (mockErr) {
+        addToast(mockErr.message || 'Mock payment recharge failed.', 'error');
+      }
     } finally {
       setAddingFunds(false);
     }

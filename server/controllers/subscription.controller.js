@@ -1,5 +1,6 @@
 import Subscription from '../models/Subscription.js';
 import Wallet from '../models/Wallet.js';
+import Notification from '../models/Notification.js';
 
 /**
  * Plan configuration: duration in days and meal multipliers.
@@ -41,7 +42,7 @@ if (targetAddressId && req.user && req.user.addresses) {
   );
 }
 
-    if (!plan || !mealType || !dietType || !deliveryAddress) {
+    if (!plan || !mealType || !dietType || !resolvedAddress) {
       return res.status(400).json({
         success: false,
         message: 'Plan, mealType, dietType, and deliveryAddress are required.',
@@ -156,9 +157,10 @@ export const getMySubscriptions = async (req, res, next) => {
 export const pauseSubscription = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { dates } = req.body; // Array of date strings to pause
+    const { dates, pausedDates } = req.body; // Array of date strings to pause
+    const activeDates = dates || pausedDates;
 
-    if (!dates || !Array.isArray(dates) || dates.length === 0) {
+    if (!activeDates || !Array.isArray(activeDates) || activeDates.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Provide an array of dates to pause.',
@@ -189,7 +191,7 @@ export const pauseSubscription = async (req, res, next) => {
     const invalidDates = [];
     const validDates = [];
 
-    for (const dateStr of dates) {
+    for (const dateStr of activeDates) {
       const pauseDate = new Date(dateStr);
       pauseDate.setHours(0, 0, 0, 0);
 
@@ -219,6 +221,17 @@ export const pauseSubscription = async (req, res, next) => {
 
     subscription.pausedDates.push(...newPaused);
     await subscription.save();
+
+    // Save notification
+    try {
+      await Notification.create({
+        user: req.user._id,
+        title: 'Subscription Paused',
+        message: `Your meal subscription was paused for ${newPaused.length} date(s). Meals will be credited.`,
+      });
+    } catch (notifErr) {
+      console.error('Failed to create pause notification:', notifErr);
+    }
 
     res.status(200).json({
       success: true,
@@ -268,6 +281,17 @@ export const resumeSubscription = async (req, res, next) => {
     }
 
     await subscription.save();
+
+    // Save notification
+    try {
+      await Notification.create({
+        user: req.user._id,
+        title: 'Subscription Resumed',
+        message: `Your meal subscription was resumed. Removed ${removedCount} future paused date(s).`,
+      });
+    } catch (notifErr) {
+      console.error('Failed to create resume notification:', notifErr);
+    }
 
     res.status(200).json({
       success: true,

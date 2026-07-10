@@ -447,9 +447,9 @@ if (wallet.balance < cost) {
             {/* Balance check */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                Wallet Balance: ₹{(wallet?.balance || 0)}
+                Wallet Balance: ₹{wallet?.balanceInRupees || '0.00'}
               </span>
-              {wallet && parseFloat(wallet.balance) < (selectedPlan.price / 100) && (
+              {wallet && wallet.balance < selectedPlan.price && (
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--error)', fontWeight: 600 }}>
                   Insufficient Balance!
                 </span>
@@ -462,7 +462,7 @@ if (wallet.balance < cost) {
               variant="primary"
               fullWidth
               loading={purchasing}
-              disabled={!selectedAddress || (wallet && parseFloat(wallet.balance) < (selectedPlan.price / 100))}
+              disabled={!selectedAddress || (wallet && wallet.balance < selectedPlan.price)}
             >
               Pay via Wallet Balance
             </Button>

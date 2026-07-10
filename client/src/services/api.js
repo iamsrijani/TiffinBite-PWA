@@ -102,4 +102,10 @@ export const adminService = {
   assignDelivery: (orderId, deliveryPartnerId) => api.post('/admin/assign-delivery', { orderId, deliveryPartnerId }),
 };
 
+export const notificationService = {
+  get: () => api.get('/notifications'),
+  markAllRead: () => api.patch('/notifications/read-all'),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+};
+
 export default api;

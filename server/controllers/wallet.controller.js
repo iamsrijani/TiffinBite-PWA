@@ -51,7 +51,13 @@ export const createRazorpayOrder = async (req, res, next) => {
     const order = await createOrder(amount / 100);
     res.json({ success: true, order, key: process.env.RAZORPAY_KEY_ID });
   } catch (err) {
-    next(err);
+    console.error('Razorpay order creation error:', err);
+    // Map 401 error code from Razorpay to a 400 Bad Request to prevent logging out the user
+    const statusCode = err.statusCode === 401 ? 400 : (err.statusCode || 500);
+    res.status(statusCode).json({
+      success: false,
+      message: err.message || 'Razorpay order creation failed.'
+    });
   }
 };
 
@@ -66,7 +72,11 @@ export const verifyRazorpayPayment = async (req, res, next) => {
     await wallet.credit(amount, 'Funds added to wallet', razorpay_payment_id);
     res.json({ success: true, message: 'Payment successful', balance: wallet.balance });
   } catch (err) {
-    next(err);
+    console.error('Razorpay payment verification error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Razorpay payment verification failed.'
+    });
   }
 };
 
