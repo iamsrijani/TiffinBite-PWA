@@ -344,40 +344,75 @@ const isValid = verifyPayment(orderId, paymentId, signature);
 ## 🏃 How to Run
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB
+- Node.js v18+ → https://nodejs.org
+- MongoDB → https://www.mongodb.com/try/download/community
 
-### Steps
+### On Mac
 
 ```bash
 # 1. Start MongoDB
 mongod --dbpath ~/data/db
 
-# 2. Install dependencies
+# 2. Open new terminal in project folder
+cd path/to/TiffinBite
+
+# 3. Create .env file
+cp server/.env.example server/.env
+
+# 4. Install dependencies
 npm install
 
-# 3. Create server/.env file
-# (see .env.example for required variables)
-
-# 4. Seed the database
+# 5. Seed the database
 npm run seed
 
-# 5. Run the app
+# 6. Run the app
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+### On Windows
+
+MongoDB installs as a Windows Service and starts automatically.
+Open Command Prompt in project folder and run:
+
+```bash
+# 1. Copy server/.env.example to server/.env and fill in values
+
+# 2. Install dependencies
+npm install
+
+# 3. Seed the database
+npm run seed
+
+# 4. Run the app
+npm run dev
+```
+
+Open http://localhost:5173 in your browser.
+
+### Environment Variables
+Copy `server/.env.example` to `server/.env`:
+
+```
+PORT=3001
+NODE_ENV=development
+MONGODB_URI=mongodb://localhost:27017/dailybite
+JWT_SECRET=your_secret_key_here
+JWT_EXPIRE=7d
+OTP_EXPIRY=5
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+RAZORPAY_KEY_ID=your_razorpay_test_key
+RAZORPAY_KEY_SECRET=your_razorpay_secret
+```
 
 ### Test Accounts
-| Role | Phone | 
+| Role | Phone |
 |---|---|
 | Admin | 9999999999 |
 | Delivery Partner | 8888888888 |
 | Customer | 7777777777 |
 
 *OTP appears in the terminal during development*
-
----
 
 ## 📁 Project Structure
 
