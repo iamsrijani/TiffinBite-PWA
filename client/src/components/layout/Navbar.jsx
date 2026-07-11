@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useUiStore } from '../../store/uiStore.js';
 import { Avatar } from '../ui/Avatar.jsx';
-import { Bell, LogOut, User as UserIcon, Wallet, Settings, Sun, Moon, ShoppingCart, Trash2 } from 'lucide-react';
+import { Bell, LogOut, User as UserIcon, Wallet, Settings, Sun, Moon, ShoppingCart, Trash2, MapPin } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { notificationService } from '../../services/api.js';
+import { notificationService, authService, walletService, orderService } from '../../services/api.js';
 
 const formatTimeAgo = (dateStr) => {
   try {
@@ -29,12 +29,73 @@ const formatTimeAgo = (dateStr) => {
 
 export const Navbar = () => {
   const { user, logout } = useAuthStore();
-  const { toggleSidebar, theme, toggleTheme, cart, removeFromCart, clearCart } = useUiStore();
+  const { toggleSidebar, theme, toggleTheme, cart, removeFromCart, clearCart, addToast } = useUiStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  
+  // Checkout modal states
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [wallet, setWallet] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const navigate = useNavigate();
+
+  const handleOpenCheckout = async () => {
+    if (cart.length === 0) return;
+    setCartOpen(false);
+    setCheckoutOpen(true);
+    try {
+      const walletRes = await walletService.get();
+      if (walletRes.success) setWallet(walletRes.data);
+      
+      const profileRes = await authService.getMe();
+      if (profileRes.success) {
+        const userAddresses = profileRes.data.addresses || [];
+        setAddresses(userAddresses);
+        if (userAddresses.length > 0) {
+          setSelectedAddressId(userAddresses[0]._id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load checkout details:', err);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!cart[0]?.menuId) {
+      addToast('Cart items are outdated. Please clear the cart and add the meal again.', 'error');
+      return;
+    }
+    if (!selectedAddressId) {
+      addToast('Please select a delivery address.', 'error');
+      return;
+    }
+    const cost = cart.reduce((sum, item) => sum + (item.price || 6000), 0);
+    if (wallet && wallet.balance < cost) {
+      addToast('Insufficient wallet balance. Please add funds first.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const itemIds = cart.map(item => item._id);
+      const response = await orderService.placeOneOffOrder(cart[0].menuId, itemIds, selectedAddressId);
+      if (response.success) {
+        addToast('Order placed successfully!', 'success');
+        clearCart();
+        setCheckoutOpen(false);
+        navigate('/orders');
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to place order.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -87,9 +148,12 @@ export const Navbar = () => {
     navigate('/wallet');
   };
 
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price || 6000), 0);
+
   return (
-    <header
-      className="navbar glass"
+    <>
+      <header
+        className="navbar glass"
       style={{
         position: 'sticky',
         top: 0,
@@ -255,7 +319,7 @@ export const Navbar = () => {
                                   {cartItem.name}
                                 </div>
                                 <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
-                                  {cartItem.calories} kcal | {cartItem.category}
+                                  {cartItem.calories} kcal | {cartItem.category} | ₹{((cartItem.price || 6000) / 100).toFixed(2)}
                                 </div>
                               </div>
                             </div>
@@ -284,6 +348,29 @@ export const Navbar = () => {
                         </div>
                       )}
                     </div>
+
+                    {cart.length > 0 && (
+                      <button
+                        onClick={handleOpenCheckout}
+                        style={{
+                          backgroundColor: 'var(--accent-primary)',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '10px',
+                          borderRadius: 'var(--radius-md)',
+                          fontWeight: 700,
+                          fontSize: 'var(--text-xs)',
+                          cursor: 'pointer',
+                          marginTop: '8px',
+                          width: '100%',
+                          transition: 'background-color 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-secondary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-primary)'}
+                      >
+                        Checkout & Pay (₹{(cartTotal / 100).toFixed(2)})
+                      </button>
+                    )}
                   </div>
                 </>
               )}
@@ -588,6 +675,148 @@ export const Navbar = () => {
         )}
       </div>
     </header>
+
+    {checkoutOpen && (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)',
+        }}
+      >
+        <div
+          className="glass--solid"
+          style={{
+            width: '100%',
+            maxWidth: '420px',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-glass)',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            position: 'relative',
+            animation: 'fadeIn 0.25s ease-out',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 700 }}>Single Meal Checkout</h3>
+            <button
+              onClick={() => setCheckoutOpen(false)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 'var(--text-sm)', cursor: 'pointer' }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>ORDER DETAILS</span>
+            <div style={{ padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+              {cart.map(item => (
+                <div key={item._id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: '4px' }}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{item.category}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-glass)', paddingTop: '8px', marginTop: '8px', fontWeight: 700, fontSize: 'var(--text-sm)' }}>
+                <span>Total Cost</span>
+                <span style={{ color: 'var(--accent-primary)' }}>₹{(cartTotal / 100).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>SELECT DELIVERY ADDRESS</span>
+            {addresses.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '120px', overflowY: 'auto' }}>
+                {addresses.map((addr) => (
+                  <label
+                    key={addr._id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      padding: '10px',
+                      borderRadius: 'var(--radius-md)',
+                      border: selectedAddressId === addr._id ? '2px solid var(--accent-primary)' : '1px solid var(--border-glass)',
+                      backgroundColor: selectedAddressId === addr._id ? 'rgba(255, 153, 51, 0.03)' : 'transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="checkoutAddress"
+                      value={addr._id}
+                      checked={selectedAddressId === addr._id}
+                      onChange={() => setSelectedAddressId(addr._id)}
+                      style={{ marginTop: '3px', accentColor: 'var(--accent-primary)' }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', minWidth: 0 }}>
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>{addr.label}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {addr.line1}, {addr.city} - {addr.pincode}
+                      </span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-glass)' }}>
+                <p style={{ margin: '0 0 6px 0', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>No saved addresses found.</p>
+                <Link to="/profile" onClick={() => setCheckoutOpen(false)} style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600, textDecoration: 'none' }}>
+                  + Add Address in Profile
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glass)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Wallet size={16} color="var(--accent-primary)" />
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>Wallet Balance</span>
+            </div>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>
+              ₹{wallet ? (wallet.balance / 100).toFixed(2) : '0.00'}
+            </span>
+          </div>
+
+          {wallet && wallet.balance < cartTotal && (
+            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: 'var(--radius-md)', color: 'var(--error)', fontSize: '10px', textAlign: 'left' }}>
+              ⚠️ Insufficient balance. Please <Link to="/wallet" onClick={() => setCheckoutOpen(false)} style={{ color: 'var(--error)', fontWeight: 700, textDecoration: 'underline' }}>Recharge Wallet</Link> first.
+            </div>
+          )}
+
+          <button
+            onClick={handlePlaceOrder}
+            disabled={isSubmitting || !selectedAddressId || (wallet && wallet.balance < cartTotal)}
+            style={{
+              backgroundColor: 'var(--accent-primary)',
+              color: '#ffffff',
+              border: 'none',
+              padding: '12px',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              cursor: 'pointer',
+              opacity: (isSubmitting || !selectedAddressId || (wallet && wallet.balance < cartTotal)) ? 0.5 : 1,
+              pointerEvents: (isSubmitting || !selectedAddressId || (wallet && wallet.balance < cartTotal)) ? 'none' : 'auto',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isSubmitting ? 'Processing Payment...' : 'Pay via Wallet & Place Order'}
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

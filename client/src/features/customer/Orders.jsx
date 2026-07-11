@@ -153,7 +153,11 @@ export const Orders = () => {
                     </div>
 
                     <h4 style={{ margin: 0, fontSize: 'var(--text-md)', fontWeight: 600 }}>
-                      {order.menu?.items?.[0]?.name || 'Healthy Daily Tiffin'}
+                      {order.items && order.items.length > 0
+                        ? order.items.map(item => item.name).join(', ')
+                        : (order.menu?.items && order.menu.items.length > 0
+                            ? order.menu.items.map(item => item.name).join(', ')
+                            : 'Healthy Daily Tiffin')}
                     </h4>
                     <p style={{ margin: '4px 0 0 0', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                       Date: {format(new Date(order.date), 'eeee, do MMMM')}
@@ -247,6 +251,36 @@ export const Orders = () => {
                 <span style={{ fontSize: 'var(--text-xs)' }}>This order was cancelled. Meals carry forward automatically.</span>
               </div>
             )}
+
+            {/* Order Items */}
+            <div style={{ padding: '16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-glass)', border: '1px solid var(--border-glass)' }}>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>ITEMS IN THIS ORDER</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                  selectedOrder.items.map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: '4px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>₹{((item.price || 6000) / 100).toFixed(2)}</span>
+                    </div>
+                  ))
+                ) : (
+                  selectedOrder.menu?.items?.map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: '4px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>Included</span>
+                    </div>
+                  ))
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-glass)', paddingTop: '8px', marginTop: '6px', fontWeight: 700, fontSize: 'var(--text-xs)' }}>
+                  <span>Total Paid</span>
+                  <span style={{ color: 'var(--accent-primary)' }}>
+                    {selectedOrder.totalAmount
+                      ? `₹${(selectedOrder.totalAmount / 100).toFixed(2)}`
+                      : 'Included in Subscription'}
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* Address */}
             <div style={{ padding: '16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-glass)', border: '1px solid var(--border-glass)' }}>

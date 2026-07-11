@@ -15,6 +15,12 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Menu',
   },
+  items: [{
+    itemId: { type: mongoose.Schema.Types.ObjectId },
+    name: { type: String },
+    price: { type: Number },
+  }],
+  totalAmount: { type: Number },
   date: {
     type: Date,
     required: [true, 'Order date is required'],

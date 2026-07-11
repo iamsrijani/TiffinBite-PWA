@@ -161,6 +161,9 @@ export const Menu = () => {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <Badge variant={item.category}>{item.category.toUpperCase()}</Badge>
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                        ₹{((item.price || 6000) / 100).toFixed(2)}
+                      </span>
                       {item.tags?.map((t) => (
                         <Badge key={t} variant="glass" style={{ fontSize: '10px' }}>{t}</Badge>
                       ))}
@@ -196,7 +199,11 @@ export const Menu = () => {
                     ) : (
                       <button
                         onClick={() => {
-                          addToCart(item);
+                          addToCart({
+                            ...item,
+                            menuId: selectedMenu._id,
+                            price: item.price || 6000
+                          });
                           addToast('Meal added to cart!', 'success');
                         }}
                         style={{

@@ -67,6 +67,7 @@ export const orderService = {
   getTodays: () => api.get('/orders/today'),
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   submitFeedback: (id, rating, comment) => api.post(`/orders/${id}/feedback`, { rating, comment }),
+  placeOneOffOrder: (menuId, itemIds, addressId) => api.post('/orders', { menuId, itemIds, addressId }),
 };
 
 export const walletService = {

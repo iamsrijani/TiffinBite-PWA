@@ -1,5 +1,9 @@
 import Order from '../models/Order.js';
 import Subscription from '../models/Subscription.js';
+import Menu from '../models/Menu.js';
+import Wallet from '../models/Wallet.js';
+import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 
 /**
  * @desc    Get current user's orders with pagination
@@ -225,6 +229,125 @@ export const submitFeedback = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Feedback submitted successfully.',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Create a one-off order (single meal purchase)
+ * @route   POST /api/orders
+ * @access  Private
+ */
+export const createOneOffOrder = async (req, res, next) => {
+  try {
+    const { menuId, itemIds, addressId } = req.body;
+
+    if (!menuId || !addressId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Menu ID and Address ID are required.',
+      });
+    }
+
+    // 1. Fetch menu details
+    const menu = await Menu.findById(menuId);
+    if (!menu) {
+      return res.status(404).json({
+        success: false,
+        message: 'Menu not found.',
+      });
+    }
+
+    // 2. Fetch user's address details
+    const user = await User.findById(req.user._id);
+    const address = user.addresses.id(addressId);
+    if (!address) {
+      return res.status(404).json({
+        success: false,
+        message: 'Address not found.',
+      });
+    }
+
+    // 3. Check price of selected items
+    let cost = 0;
+    let orderItems = [];
+
+    if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
+      const selectedItems = menu.items.filter(item => itemIds.includes(item._id.toString()));
+      cost = selectedItems.reduce((sum, item) => sum + (item.price || 6000), 0);
+      orderItems = selectedItems.map(item => ({
+        itemId: item._id,
+        name: item.name,
+        price: item.price || 6000
+      }));
+    } else {
+      cost = menu.price?.single || 12000;
+      orderItems = menu.items.map(item => ({
+        itemId: item._id,
+        name: item.name,
+        price: item.price || 6000
+      }));
+    }
+
+    if (!cost || cost <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order price could not be determined.',
+      });
+    }
+
+    // 4. Verify wallet balance
+    let wallet = await Wallet.findOne({ user: req.user._id });
+    if (!wallet || wallet.balance < cost) {
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient wallet balance. Please add funds first.',
+      });
+    }
+
+    // 5. Deduct cost from wallet
+    await wallet.debit(
+      cost,
+      `Single meal order: ${orderItems.map(i => i.name).join(', ')}`,
+      `order_purchase_${Date.now()}`
+    );
+
+    // 6. Create order
+    const order = await Order.create({
+      user: req.user._id,
+      menu: menuId,
+      items: orderItems,
+      totalAmount: cost,
+      date: menu.date,
+      mealType: menu.mealType,
+      status: 'scheduled',
+      deliveryAddress: {
+        label: address.label,
+        line1: address.line1,
+        line2: address.line2 || '',
+        city: address.city,
+        pincode: address.pincode,
+        coordinates: address.coordinates,
+      },
+    });
+
+    // 7. Create notification
+    try {
+      await Notification.create({
+        user: req.user._id,
+        title: 'Order Placed',
+        message: `Your meal order containing ${orderItems.length} item(s) has been scheduled.`,
+      });
+    } catch (notifErr) {
+      console.error('Failed to create order notification:', notifErr);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Order placed and paid successfully!',
       data: order,
     });
   } catch (error) {

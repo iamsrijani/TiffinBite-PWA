@@ -5,6 +5,7 @@ import {
   getTodaysOrder,
   updateOrderStatus,
   submitFeedback,
+  createOneOffOrder,
 } from '../controllers/order.controller.js';
 import auth from '../middleware/auth.js';
 import roleGuard from '../middleware/roleGuard.js';
@@ -15,6 +16,7 @@ const router = Router();
 router.use(auth);
 
 router.get('/', getMyOrders);
+router.post('/', createOneOffOrder);
 router.get('/today', getTodaysOrder);
 router.get('/:id', getOrderById);
 router.patch('/:id/status', roleGuard('admin', 'delivery'), updateOrderStatus);

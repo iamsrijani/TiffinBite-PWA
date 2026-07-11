@@ -15,6 +15,7 @@ const menuItemSchema = new mongoose.Schema({
   fat: { type: Number, default: 0 },
   tags: [{ type: String, trim: true }],
   isAvailable: { type: Boolean, default: true },
+  price: { type: Number, default: 6000 }, // in paise
 }, { _id: true });
 
 const priceSchema = new mongoose.Schema({
