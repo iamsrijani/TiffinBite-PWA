@@ -24,32 +24,49 @@ export const getDashboardStats = async (req, res, next) => {
       activeSubscriptions,
       todayOrders,
       allSubscriptions,
+      oneOffOrders,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: 'customer' }),
       Subscription.countDocuments({ status: 'active' }),
       Order.find({ date: { $gte: today, $lt: tomorrow } }).populate('menu'),
       Subscription.find({ status: { $in: ['active', 'expired', 'cancelled'] } }),
+      Order.find({ subscription: { $exists: false } }),
     ]);
 
     // Today's order breakdown
-    const todayVeg = todayOrders.filter((o) =>
-      o.menu && o.menu.items && o.menu.items.some((i) => i.category === 'veg')
-    ).length;
-    const todayNonveg = todayOrders.filter((o) =>
-      o.menu && o.menu.items && o.menu.items.some((i) => i.category === 'nonveg')
-    ).length;
+    let todayVeg = 0;
+    let todayNonveg = 0;
+    let todayVegan = 0;
 
-    // Revenue calculation (sum of all subscription amountPaid)
-    const totalRevenue = allSubscriptions.reduce(
-      (sum, sub) => sum + (sub.amountPaid || 0), 0
-    );
+    todayOrders.forEach(o => {
+      if (o.items && o.items.length > 0) {
+        o.items.forEach(item => {
+          const menuItem = o.menu?.items?.find(mi => mi.name === item.name);
+          const cat = menuItem?.category || item.category || 'veg';
+          if (cat === 'veg') todayVeg++;
+          else if (cat === 'nonveg') todayNonveg++;
+          else if (cat === 'vegan') todayVegan++;
+        });
+      } else if (o.menu && o.menu.items) {
+        o.menu.items.forEach(item => {
+          if (item.category === 'veg') todayVeg++;
+          else if (item.category === 'nonveg') todayNonveg++;
+          else if (item.category === 'vegan') todayVegan++;
+        });
+      }
+    });
+
+    // Revenue calculation (subscriptions + one-off orders)
+    const subRevenue = allSubscriptions.reduce((sum, sub) => sum + (sub.amountPaid || 0), 0);
+    const oneOffRevenue = oneOffOrders.reduce((sum, ord) => sum + (ord.totalAmount || 0), 0);
+    const totalRevenue = subRevenue + oneOffRevenue;
 
     // Today's order status breakdown
     const orderStatusBreakdown = {
       scheduled: todayOrders.filter((o) => o.status === 'scheduled').length,
       preparing: todayOrders.filter((o) => o.status === 'preparing').length,
-      outForDelivery: todayOrders.filter((o) => o.status === 'out_for_delivery').length,
+      out_for_delivery: todayOrders.filter((o) => o.status === 'out_for_delivery').length,
       delivered: todayOrders.filter((o) => o.status === 'delivered').length,
       cancelled: todayOrders.filter((o) => o.status === 'cancelled').length,
     };
@@ -57,19 +74,16 @@ export const getDashboardStats = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: {
-        totalUsers,
-        totalCustomers,
+        totalUsers: totalCustomers || totalUsers, // Align with Dashboard.jsx card text (TOTAL CUSTOMERS)
         activeSubscriptions,
-        todayOrders: {
-          total: todayOrders.length,
+        todayOrdersCount: todayOrders.length,
+        totalRevenue,
+        dietSplit: {
           veg: todayVeg,
           nonveg: todayNonveg,
-          statusBreakdown: orderStatusBreakdown,
+          vegan: todayVegan,
         },
-        revenue: {
-          total: totalRevenue,
-          totalInRupees: (totalRevenue / 100).toFixed(2),
-        },
+        statusSplit: orderStatusBreakdown,
       },
     });
   } catch (error) {
@@ -87,58 +101,59 @@ export const getOrderForecast = async (req, res, next) => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-    const dayAfter = new Date(tomorrow);
-    dayAfter.setDate(dayAfter.getDate() + 1);
+    const tomorrowEnd = new Date(tomorrow);
+    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
 
-    // Active subscriptions that cover tomorrow
-    const activeSubscriptions = await Subscription.find({
-      status: 'active',
-      startDate: { $lte: dayAfter },
-      endDate: { $gte: tomorrow },
-    });
+    // 1. Find all scheduled orders for tomorrow
+    const orders = await Order.find({
+      date: { $gte: tomorrow, $lt: tomorrowEnd },
+      status: { $ne: 'cancelled' }
+    })
+    .populate('user', 'name phone email')
+    .populate('deliveryPartner', 'name phone')
+    .populate('menu')
+    .populate('subscription');
 
-    // Filter out paused subscriptions for tomorrow
-    const activeSubs = activeSubscriptions.filter((sub) => {
-      const isPaused = sub.pausedDates.some((d) => {
-        const pd = new Date(d);
-        pd.setHours(0, 0, 0, 0);
-        return pd.getTime() === tomorrow.getTime();
-      });
-      return !isPaused;
-    });
+    // 2. Count statistics from these orders
+    let totalOrders = orders.length;
+    let lunchCount = 0;
+    let dinnerCount = 0;
 
-    // Count by meal type
-    const byMealType = { lunch: 0, dinner: 0 };
-    for (const sub of activeSubs) {
-      if (sub.mealType === 'both') {
-        byMealType.lunch++;
-        byMealType.dinner++;
-      } else {
-        byMealType[sub.mealType]++;
+    let dietSplit = { veg: 0, nonveg: 0, vegan: 0 };
+    let pincodeGroups = {};
+
+    orders.forEach(o => {
+      // Meal type count
+      if (o.mealType === 'lunch') lunchCount++;
+      if (o.mealType === 'dinner') dinnerCount++;
+
+      // Diet split count
+      let diet = 'veg'; // default fallback
+      if (o.items && o.items.length > 0) {
+        const menuItem = o.menu?.items?.find(mi => mi.name === o.items[0].name);
+        diet = menuItem?.category || 'veg';
+      } else if (o.subscription?.dietType) {
+        diet = o.subscription.dietType;
+      } else if (o.menu && o.menu.items && o.menu.items.length > 0) {
+        diet = o.menu.items[0].category || 'veg';
       }
-    }
+      dietSplit[diet] = (dietSplit[diet] || 0) + 1;
 
-    // Count by diet type
-    const byDietType = { veg: 0, nonveg: 0, vegan: 0 };
-    for (const sub of activeSubs) {
-      byDietType[sub.dietType] = (byDietType[sub.dietType] || 0) + 1;
-    }
-
-    // Count by area (city)
-    const byArea = {};
-    for (const sub of activeSubs) {
-      const city = sub.deliveryAddress?.city || 'Unknown';
-      byArea[city] = (byArea[city] || 0) + 1;
-    }
+      // Pincode grouping
+      const pin = o.deliveryAddress?.pincode || 'Unknown';
+      pincodeGroups[pin] = (pincodeGroups[pin] || 0) + 1;
+    });
 
     res.status(200).json({
       success: true,
       data: {
         date: tomorrow.toISOString().split('T')[0],
-        totalMeals: byMealType.lunch + byMealType.dinner,
-        byMealType,
-        byDietType,
-        byArea,
+        totalOrders,
+        lunchCount,
+        dinnerCount,
+        dietSplit,
+        pincodeGroups,
+        orders,
       },
     });
   } catch (error) {
@@ -156,9 +171,9 @@ export const getAllCustomers = async (req, res, next) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
     const skip = (page - 1) * limit;
-    const { search } = req.query;
+    const { search, role } = req.query;
 
-    const filter = { role: 'customer' };
+    const filter = { role: role || 'customer' };
 
     if (search) {
       filter.$or = [
@@ -353,12 +368,16 @@ export const getAllFeedback = async (req, res, next) => {
  */
 export const assignDeliveryPartner = async (req, res, next) => {
   try {
-    const { deliveryPartnerId, orderIds } = req.body;
+    let { deliveryPartnerId, orderIds, orderId } = req.body;
+
+    if (!orderIds && orderId) {
+      orderIds = [orderId];
+    }
 
     if (!deliveryPartnerId || !orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'deliveryPartnerId and an array of orderIds are required.',
+        message: 'deliveryPartnerId and orderId (or array of orderIds) are required.',
       });
     }
 

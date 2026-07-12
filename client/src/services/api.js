@@ -96,7 +96,7 @@ export const deliveryService = {
 export const adminService = {
   getStats: () => api.get('/admin/stats'),
   getForecast: () => api.get('/admin/forecast'),
-  getCustomers: (page = 1, search = '') => api.get('/admin/customers', { params: { page, search } }),
+  getCustomers: (page = 1, search = '', role = 'customer') => api.get('/admin/customers', { params: { page, search, role } }),
   getCustomerById: (id) => api.get(`/admin/customers/${id}`),
   issueRefund: (userId, amount, description) => api.post('/admin/refund', { userId, amount, description }),
   getFeedback: (page = 1) => api.get('/admin/feedback', { params: { page } }),

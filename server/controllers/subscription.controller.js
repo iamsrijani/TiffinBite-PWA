@@ -190,6 +190,7 @@ export const pauseSubscription = async (req, res, next) => {
     const now = new Date();
     const invalidDates = [];
     const validDates = [];
+    const outOfBoundsDates = [];
 
     for (const dateStr of activeDates) {
       const pauseDate = new Date(dateStr);
@@ -201,11 +202,20 @@ export const pauseSubscription = async (req, res, next) => {
       const [cutoffHour, cutoffMin] = subscription.pauseCutoffTime.split(':').map(Number);
       cutoff.setHours(cutoffHour, cutoffMin, 0, 0);
 
-      if (now > cutoff) {
+      if (pauseDate < subscription.startDate || pauseDate > subscription.endDate) {
+        outOfBoundsDates.push(dateStr);
+      } else if (now > cutoff) {
         invalidDates.push(dateStr);
-      } else if (pauseDate >= subscription.startDate && pauseDate <= subscription.endDate) {
+      } else {
         validDates.push(pauseDate);
       }
+    }
+
+    if (outOfBoundsDates.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot pause for dates outside your subscription period (${new Date(subscription.startDate).toLocaleDateString()} to ${new Date(subscription.endDate).toLocaleDateString()}): ${outOfBoundsDates.join(', ')}`,
+      });
     }
 
     if (invalidDates.length > 0 && validDates.length === 0) {

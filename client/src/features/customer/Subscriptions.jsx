@@ -488,6 +488,7 @@ if (wallet.balance < cost) {
               type="date"
               value={pauseDate}
               min={format(addDays(new Date(), 1), 'yyyy-MM-dd')}
+              max={format(new Date(selectedSubToPause.endDate), 'yyyy-MM-dd')}
               onChange={(e) => setPauseDate(e.target.value)}
               required
             />

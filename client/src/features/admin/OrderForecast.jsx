@@ -45,20 +45,14 @@ export const OrderForecast = () => {
 
     // Fetch riders
     try {
-      // In seed, Raju phone is 8888888888. We can fetch riders list.
-      // For demonstration, fetch list of delivery partners
-      const res = await adminService.getCustomers(1, '');
+      const res = await adminService.getCustomers(1, '', 'delivery');
       if (res.success && res.data) {
-        // filter roles containing 'delivery'
-        // If we don't have a specific rider fetch, we will mock Raju details
-        setRiders([
-          { _id: '664b97779d71c4c1a9999988', name: 'Raju Delivery Partner', phone: '8888888888' }
-        ]);
+        setRiders(res.data);
       }
     } catch (err) {
       console.warn('Error fetching riders, using fallback');
       setRiders([
-        { _id: '664b97779d71c4c1a9999988', name: 'Raju Delivery Partner', phone: '8888888888' }
+        { _id: '664b97779d71c4c1a9999988', name: 'Raju Delivery Partner (fallback)', phone: '8888888888' }
       ]);
     }
   };
