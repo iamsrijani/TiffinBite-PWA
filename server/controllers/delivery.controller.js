@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import Subscription from '../models/Subscription.js';
+import { autoResolvePastOrders } from '../utils/autoResolveOrders.js';
 
 /**
  * @desc    Get today's assigned deliveries for delivery partner
@@ -8,6 +9,7 @@ import Subscription from '../models/Subscription.js';
  */
 export const getMyDeliveries = async (req, res, next) => {
   try {
+    await autoResolvePastOrders();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -15,11 +17,19 @@ export const getMyDeliveries = async (req, res, next) => {
 
     const orders = await Order.find({
       deliveryPartner: req.user._id,
-      date: { $gte: today, $lt: tomorrow },
+      $or: [
+        { 
+          date: { $gte: today, $lt: tomorrow },
+          status: { $in: ['delivered', 'cancelled'] }
+        },
+        {
+          status: { $in: ['scheduled', 'preparing', 'out_for_delivery'] }
+        }
+      ]
     })
       .populate('user', 'name phone')
       .populate('menu', 'items mealType')
-      .sort({ mealType: 1 });
+      .sort({ date: 1, mealType: 1 });
 
     // Summary counts
     const summary = {
@@ -221,7 +231,15 @@ export const getDeliveryStats = async (req, res, next) => {
     // Today's deliveries
     const todayOrders = await Order.find({
       deliveryPartner: req.user._id,
-      date: { $gte: today, $lt: tomorrow },
+      $or: [
+        { 
+          date: { $gte: today, $lt: tomorrow },
+          status: { $in: ['delivered', 'cancelled'] }
+        },
+        {
+          status: { $in: ['scheduled', 'preparing', 'out_for_delivery'] }
+        }
+      ]
     });
 
     // All-time stats

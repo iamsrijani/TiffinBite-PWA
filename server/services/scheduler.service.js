@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import Subscription from '../models/Subscription.js';
 import Order from '../models/Order.js';
 import Menu from '../models/Menu.js';
+import { autoResolvePastOrders } from '../utils/autoResolveOrders.js';
 
 /**
  * Scheduler service using node-cron.
@@ -125,6 +126,7 @@ export const initScheduler = () => {
   // Run daily at midnight IST
   cron.schedule('0 0 * * *', async () => {
     await generateDailyOrders();
+    await autoResolvePastOrders();
   }, {
     timezone: 'Asia/Kolkata',
   });

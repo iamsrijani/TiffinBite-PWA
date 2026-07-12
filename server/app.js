@@ -10,6 +10,7 @@ import env from './config/env.js';
 import initSocket from './socket/index.js';
 import { initScheduler } from './services/scheduler.service.js';
 import errorHandler from './middleware/errorHandler.js';
+import { autoResolvePastOrders } from './utils/autoResolveOrders.js';
 
 // Route Imports
 import authRoutes from './routes/auth.routes.js';
@@ -51,6 +52,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Initialize scheduler
 initScheduler();
+autoResolvePastOrders();
 
 // API Routes
 app.use('/api/auth', authRoutes);

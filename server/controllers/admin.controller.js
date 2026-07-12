@@ -4,6 +4,7 @@ import Subscription from '../models/Subscription.js';
 import Wallet from '../models/Wallet.js';
 import Menu from '../models/Menu.js';
 import Notification from '../models/Notification.js';
+import { autoResolvePastOrders } from '../utils/autoResolveOrders.js';
 
 /**
  * @desc    Get dashboard stats
@@ -12,6 +13,7 @@ import Notification from '../models/Notification.js';
  */
 export const getDashboardStats = async (req, res, next) => {
   try {
+    await autoResolvePastOrders();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);

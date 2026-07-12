@@ -4,6 +4,7 @@ import Menu from '../models/Menu.js';
 import Wallet from '../models/Wallet.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
+import { autoResolvePastOrders } from '../utils/autoResolveOrders.js';
 
 /**
  * @desc    Get current user's orders with pagination
@@ -12,6 +13,7 @@ import Notification from '../models/Notification.js';
  */
 export const getMyOrders = async (req, res, next) => {
   try {
+    await autoResolvePastOrders();
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
