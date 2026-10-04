@@ -1,6 +1,6 @@
 # 🍱 TiffinBite — Daily Tiffin Subscription & Delivery PWA
 
-> A full-stack Progressive Web Application for daily home-style meal subscription and delivery, built for Indian users.
+> A full-stack Progressive Web Application for daily home-style meal subscription and delivery, built for Indian users.  
 
 
 
